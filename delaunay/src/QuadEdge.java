@@ -1,7 +1,9 @@
-import java.lang.reflect.Array;
 import java.util.*;
 import java.io.*;
 import java.util.Comparator;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 
 
 class Vertex {
@@ -437,15 +439,106 @@ class Delaunay{
 //    }
 
 //    outputTriangulation(s2, d, nverts, p.le, outname);
-
-    //    void outputTriangulation(Subdivision &s, Vertex verts[], int n_verts, Edge* start, const char* outname) {
-    public void triangulate(Subdivision s, ArrayList<Vertex> vertices, int numVertices, Edge start, String outputFile ) {
-        
-
-
+    // returns the three sides of a triangle with a given edge
+    public int[] triangle(Edge start) {
+        int nedges = 1;
+        //int ids[3];
+        int[] ids = new int[3];
+        Edge curr = start;
+        ids[0] = start.org.id;
+        while (curr.lnext() != start) {
+            curr = curr.lnext();
+            nedges++;
+            if (nedges > 3) {
+                int[] triang = {-1, -1, -1};
+                return triang;
+            }
+            ids[nedges-1] = curr.org.id;
+        }
+        //TODO: sort(begin(ids), end(ids));
+        Arrays.sort(ids);
+        return ids;
     }
 
+    // Returns a pair of points with a given edge
+    public int[] toPoints(Edge e) {
+        int[] points = new int[2];
+        points[0] = e.org.id;
+        points[1] = e.dest.id;
+        return points;
+    }
 
+    //    void outputTriangulation(Subdivision &s, Vertex verts[], int n_verts, Edge* start, const char* outname) {
+    public void triangulate (Subdivision s, ArrayList<Vertex> vertices, int numVertices, Edge start,
+                             String outputFile) throws IOException {
+
+        Set<int[]> triangles = new HashSet<>();
+        Set<int[]> visited = new HashSet<>();
+        Queue<Edge> toCheck = new LinkedList<>();
+        toCheck.add(start);
+        visited.add(toPoints(start) );
+
+        Edge curr;
+        while (!toCheck.isEmpty()) {
+            curr = toCheck.peek();
+            toCheck.poll();
+            triangles.add(triangle(curr));
+            int[] twoPt1 = toPoints(curr.onext());
+            int[] twoPt2 = toPoints(curr.sym());
+            //TODO: what's the point of using unordered_set.end, what's java equivalent
+            if (visited.find(twoPt1) == visited.end()) {
+                toCheck.add(curr.onext());
+                visited.add(twoPt1);
+            }
+            if (visited.find(twoPt1) == visited.end()) {
+                toCheck.add(curr.sym());
+                visited.add(twoPt2);
+            }
+        }
+
+        int ntriangles = triangles.size();
+        int[] temp = {-1, -1, -1};
+        // TODO: if (triangles.find(make_tuple(-1,-1,-1) ) != triangles.end()) {
+        if (triangles.contains(temp != triangles.end()) {
+            ntriangles--;
+        }
+
+        int count = 1;
+        curr = start;
+        while (count < 4 && curr.rprev() != start) {
+            curr = curr.rprev();
+            count++;
+        }
+        if (count == 3 && numVertices > 3) {
+            int[] ids = new int[3];
+            ids[0] = curr.org.id;
+            ids[2] = curr.rprev().org.id;
+            ids[3] = curr.rprev().rprev().org.id;
+            //TODO: sort(begin(ids), end(ids));
+            Arrays.sort(ids);
+//            triangles.erase( make_tuple (ids[0], ids[1], ids[2]) );
+            triangles.remove(ids);
+            ntriangles--;
+        }
+
+        //TODO: write the file
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("./node/" + outputFile))) {
+//            String content = "This is the content to write into file\n";
+//            bw.write(content);
+//            System.out.println("Done");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        outfile << ntriangles << " 3 0" << endl;
+//        int i = 0;
+//        for (auto &tr : triangles) {
+//            if (get<0>(tr) == -1) { continue; }
+//
+//            outfile << i++ << " " << get<0>(tr) << " " << get<1>(tr) << " " << get<2>(tr) << endl;
+//        }
+//        outfile.close();
+    }
 
 
 
@@ -454,10 +547,7 @@ class Delaunay{
         // TODO: init exact geometric predicates
 //        exactinit();
 
-
-        //input: node file
         boolean alt = false;
-        //boolean xway = false;
         boolean validInput = false;
         String option = "";
         Scanner commandSC = new Scanner(System.in);
@@ -470,7 +560,7 @@ class Delaunay{
                 validInput = true; //input is valid
             }
         }
-        //TODO：check if need to change boolean vertical;
+        // TODO：check if need to change boolean vertical;
         if(option.contains("y")) {
             //set alt = true;
             alt = true;
@@ -486,14 +576,20 @@ class Delaunay{
         while (!validFileName) {
             System.out.println("Enter a valid input file name: " + Arrays.toString(fileNames));
             inputFile = commandSC.next().toLowerCase().trim();
-            if (!fileSet.contains(inputFile)) {
-                System.out.println("Enter a valid file name: " + inputFile.toString());
-            } else {
+            if (fileSet.contains(inputFile)) {
                 validFileName = true; //exit loop
             }
         }
-        // TODO
-            // prompt for an output file name
+        // prompt for an output file name
+        boolean validOutput = false;
+        String outputFile = "";
+        while(validOutput) {
+            System.out.println("Enter a valid output file that ends with .ele");
+            outputFile = commandSC.next().toLowerCase().trim();
+            if(outputFile.endsWith(".ele")) {
+                validOutput = true;
+            }
+        }
 
         // Scan files to insert the data into points
         // insert points in to a vector of points to be sent to delaunay
@@ -504,22 +600,14 @@ class Delaunay{
             System.out.println("File not found exception");
             System.exit(1);
         }
-        //String firstLine = "";
+
+        // String firstLine = "";
         int numVertices = 0;
         int numDimension = 0;
         int numAttributes = 0;
         int boudaryMarker = 0;
 
-
-//        First line: <# of vertices> <dimension (must be 2)> <# of attributes> <# of boundary markers (0 or 1)>
-//        class Vertex {
-//            double x;
-//            double y;
-//            int id;
-//        }
-//        ArrayList<Vertex> vertices
-
-
+        // First line: <# of vertices> <dimension (must be 2)> <# of attributes> <# of boundary markers (0 or 1)>
         if (fileScan.hasNextLine()) { //first line
             Scanner lineScan = new Scanner((fileScan.nextLine())); //there must be 4 ints on the first line
             numVertices = lineScan.nextInt();
