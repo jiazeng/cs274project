@@ -1,3 +1,4 @@
+import java.lang.reflect.Array;
 import java.util.*;
 import java.io.*;
 import java.util.Comparator;
@@ -7,6 +8,11 @@ class Vertex {
     double x;
     double y;
     int id;
+    public Vertex(double x, double y, int id) {
+        this.x = x;
+        this.y = y;
+        this.id = id;
+    }
 }
 
 //quadedge will contain the edge memories themselves, not just pointer
@@ -126,6 +132,7 @@ class Subdivision {
 
 //----------------------------------------------------
 class Delaunay{
+
     Comparator<Vertex> compareXFirst = new Comparator<Vertex>() {
         @Override
         public int compare(Vertex v1, Vertex v2) {
@@ -176,7 +183,7 @@ class Delaunay{
 
     }
 
-    public double incircleexact(Vertex pa, Vertex pb, Vertex pc, Vertex pd) {
+    public double inCircle(Vertex pa, Vertex pb, Vertex pc, Vertex pd) {
         double adx, ady, bdx, bdy, cdx, cdy;
         double abdet, bcdet, cadet;
         double alift, blift, clift;
@@ -377,7 +384,7 @@ class Delaunay{
         while (true) {
             lcand = base.sym().onext();
             if (rightof(lcand.dest, base) > 0) {
-                while (incircleexact(base.dest, base.org, lcand.dest, lcand.onext().dest) > 0) {
+                while (inCircle(base.dest, base.org, lcand.dest, lcand.onext().dest) > 0) {
                     t = lcand.onext();
                     s.deleteEdge(lcand);
                     lcand = t;
@@ -388,7 +395,7 @@ class Delaunay{
 
             if (rightof(rcand.dest, base) > 0) {
                 //cout << "Entering rcand loop" << endl;
-                while (incircleexact(base.dest, base.org, rcand.dest, rcand.oprev().dest) > 0) {
+                while (inCircle(base.dest, base.org, rcand.dest, rcand.oprev().dest) > 0) {
                     t = rcand.oprev();
                     s.deleteEdge(rcand);
                     rcand = t;
@@ -403,7 +410,7 @@ class Delaunay{
                 break;
             }
             // choose which edge to connect
-            if (lvalid <= 0 || (rvalid > 0 && incircleexact(lcand.dest, lcand.org, rcand.org, rcand.dest) > 0)) {
+            if (lvalid <= 0 || (rvalid > 0 && inCircle(lcand.dest, lcand.org, rcand.org, rcand.dest) > 0)) {
                 // Adding rcand
                 base = s.connect(rcand, base.sym());
             } else {
@@ -429,10 +436,24 @@ class Delaunay{
 //        printVertex(e->dest);
 //    }
 
+//    outputTriangulation(s2, d, nverts, p.le, outname);
 
-    public static void main(String[] args) {
-//        insert the data into points
-//        insert points into a vector of points to be sent to delaunay
+    //    void outputTriangulation(Subdivision &s, Vertex verts[], int n_verts, Edge* start, const char* outname) {
+    public void triangulate(Subdivision s, ArrayList<Vertex> vertices, int numVertices, Edge start, String outputFile ) {
+        
+
+
+    }
+
+
+
+
+
+        public static void main(String[] args) {
+
+        // TODO: init exact geometric predicates
+//        exactinit();
+
 
         //input: node file
         boolean alt = false;
@@ -457,45 +478,47 @@ class Delaunay{
 
         // input file name as input
         boolean validFileName = false;
-        String fileName = "";
+        String inputFile = "";
         String[] fileNames = {"4.node", "633.node", "box.node", "dots.node", "flag.node", "grid.node",
                     "ladder.node", "spiral.node", "tri.node"};
         Set<String> fileSet = new HashSet<String>(Arrays.asList(fileNames));
 
         while (!validFileName) {
             System.out.println("Enter a valid input file name: " + Arrays.toString(fileNames));
-            fileName = commandSC.next().toLowerCase().trim();
-            if (!fileSet.contains(fileName)) {
-                System.out.println("Enter a valid file name: " + fileName.toString());
+            inputFile = commandSC.next().toLowerCase().trim();
+            if (!fileSet.contains(inputFile)) {
+                System.out.println("Enter a valid file name: " + inputFile.toString());
             } else {
                 validFileName = true; //exit loop
             }
         }
+        // TODO
+            // prompt for an output file name
 
+        // Scan files to insert the data into points
+        // insert points in to a vector of points to be sent to delaunay
         Scanner fileScan = null;
         try {
-            fileScan = new Scanner(new File("./node/" + fileName));
+            fileScan = new Scanner(new File("./node/" + inputFile));
         } catch (FileNotFoundException e) {
-            System.out.println("Fnile not found exception");
+            System.out.println("File not found exception");
             System.exit(1);
         }
         //String firstLine = "";
-        int numVertices;
-        int numDimension;
-        int numAttributes;
-        int boudaryMarker;
+        int numVertices = 0;
+        int numDimension = 0;
+        int numAttributes = 0;
+        int boudaryMarker = 0;
 
 
 //        First line: <# of vertices> <dimension (must be 2)> <# of attributes> <# of boundary markers (0 or 1)>
-        while(fileScan.hasNextLine() && foundLine == "") {
-            String line = fileScan.nextLine();
-            Scanner lineScan = new Scanner(line);
-            String name = lineScan.next();
-            String gender = lineScan.next();
-            if(name.equalsIgnoreCase(inputName) && gender.equalsIgnoreCase(inputGender)) {
-                foundLine = line;
-            }
-        }
+//        class Vertex {
+//            double x;
+//            double y;
+//            int id;
+//        }
+//        ArrayList<Vertex> vertices
+
 
         if (fileScan.hasNextLine()) { //first line
             Scanner lineScan = new Scanner((fileScan.nextLine())); //there must be 4 ints on the first line
@@ -505,26 +528,53 @@ class Delaunay{
             boudaryMarker = lineScan.nextInt();
         }
 
+        ArrayList<Vertex> vertices = new ArrayList<Vertex>();
 
-        //read through the next
-        //Remaining lines: <vertex #> <x> <y> [attributes] [boundary marker]
+        // Remaining lines: <vertex #> <x> <y> [attributes] [boundary marker]
+        // Blank lines and comments prefixed by `#' may be placed anywhere.
+        // vertices must be numbered consecutively, starting from one or zero.
         while (fileScan.hasNextLine()) {
             String line = fileScan.nextLine();
-            if(line.isEmpty()) {
-                int vertexNum =
-
+            if(line.isEmpty() || !line.contains("#")) { //ignore empty lines and comments
+                Scanner lineScan = new Scanner(line);
+                int id = lineScan.nextInt();
+                double x = lineScan.nextDouble();
+                double y = lineScan.nextDouble();
+                Vertex v = new Vertex(x, y, id);
+                vertices.add(v);
             }
         }
 
-
-
-        //output:
-        //number of point,
-
-//        Blank lines and comments prefixed by `#' may be placed anywhere.
-//        Vertices must be numbered consecutively, starting from one or zero.
+        // TODO
+        // auto t1 = Clock::now();
+        Subdivision s2 = new Subdivision();
+        Delaunay d = new Delaunay();
+        Edge[] edgePair = d.delaunay(s2, 0, numVertices, true, alt, vertices);
+        // TODO
+        // auto t2 = Clock::now();
+//        nanoseconds ms = chrono::duration_cast<nanoseconds>(t2-t1);
+//        cout << ms.count() * MILLI_PER_NANO << " milliseconds to triangulate" << endl;
 //
+//        t1 = Clock::now();
+
+        // TODO
+        // outputTriangulation(s2, d, nverts, p.le, outname);
+//        t2 = Clock::now();
+//        ms = chrono::duration_cast<nanoseconds>(t2-t1);
+//        cout << ms.count() * MILLI_PER_NANO << " milliseconds to output triangles" << endl;
+//        cout << s2.removable << " temporary edges deleted along the way" << endl;
+        // memory cleanup
+
+//        delete[] d;
+//        EdgeRecord *er;
+//        for (auto& it : s2.records) {
+//            er = it.second;
+//            delete er;
+//        }
 //
+//        return 0;
+//
+
 
     }
 }
@@ -534,6 +584,8 @@ class Delaunay{
 // 3 0 10
 // 4 0 7.5
 
+//TODO: write output file
+//TODO:
 
 //TODO:
 /*
