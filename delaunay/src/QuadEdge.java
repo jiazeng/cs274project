@@ -207,7 +207,7 @@ class Delaunay{
     }
 
 
-    public Edge[] delaunay(Subdivision s, int init, int finish, boolean xway, boolean alt, Vertex[] vertices) {
+    public Edge[] delaunay(Subdivision s, int init, int finish, boolean xway, boolean alt, ArrayList<Vertex> vertices) {
         Edge[] edgePair = new Edge[2];
         Edge[] left = new Edge[2];
         Edge[] right = new Edge[2];
@@ -216,39 +216,40 @@ class Delaunay{
         if (size < 2) {
             return null;
         }
+        Vertex[] tempArr; //copy arraylist to array for sorting
+        tempArr = vertices.toArray(new Vertex[vertices.size()]);
         if (size == 2) {
             if (xway) {
-                Arrays.sort(vertices, init, finish, compareXFirst);
+                Arrays.sort(tempArr, init, finish, compareXFirst);
             } else {
-                Arrays.sort(vertices, init, finish, compareYFirst);
+                Arrays.sort(tempArr, init, finish, compareYFirst);
             }
+            vertices = new ArrayList<Vertex>(Arrays.asList(tempArr));
+
             Vertex v1;
             Vertex v2;
-//            v1 = vertices.elementAt(init);
-//            v2 = vertices.elementAt(init + 1);
-            v1 = vertices[init];
-            v2 = vertices[init + 1];
-
+            v1 = vertices.get(init);
+            v2 = vertices.get(init + 1);
             Edge e = s.addEdge(v1, v2);
             edgePair[0] = e;
             edgePair[1] = e.sym();
             return edgePair;
         }
         if (size == 3) {
+
             if (xway) {
-                Arrays.sort(vertices, init, finish, compareXFirst);
+                Arrays.sort(tempArr, init, finish, compareXFirst);
             } else {
-                Arrays.sort(vertices, init, finish, compareYFirst);
+                Arrays.sort(tempArr, init, finish, compareYFirst);
             }
+            vertices = new ArrayList<Vertex>(Arrays.asList(tempArr));
             Vertex v1;
             Vertex v2;
             Vertex v3;
-//            v1 = vertices.elementAt(init);
-//            v2 = vertices.elementAt(init + 1);
-//            v3 = vertices.elementAt(init + 2);
-            v1 = vertices[init];
-            v2 = vertices[init + 1];
-            v3 = vertices[init + 2];
+
+            v1 = vertices.get(init);
+            v2 = vertices.get(init + 1);
+            v3 = vertices.get(init + 2);
 
 
             Edge e1 = s.addEdge(v1, v2);
@@ -416,24 +417,115 @@ class Delaunay{
         return edgePair;
     }
 
+//    void printVertex(Vertex v) {
+//        cout << v.x << " " << v.y << " id " << v.id << endl;
+//    }
+//
+//    void printEdge(Edge* e) {
+//        cout << "edge" << endl;
+//        cout << "org ";
+//        printVertex(e->org);
+//        cout << "dest ";
+//        printVertex(e->dest);
+//    }
+
+
     public static void main(String[] args) {
+//        insert the data into points
+//        insert points into a vector of points to be sent to delaunay
+
         //input: node file
-        Scanner sc = null;
+        boolean alt = false;
+        //boolean xway = false;
+        boolean validInput = false;
+        String option = "";
+        Scanner commandSC = new Scanner(System.in);
+
+        // choose alternating option or vertical option
+        while(!validInput) {
+            System.out.println("Do you want to choose the alternating option? Y/N");
+            option = commandSC.next().toLowerCase();
+            if(option.equals("y") || option.equals("yes") || option.equals("n") || option.equals("no")){
+                validInput = true; //input is valid
+            }
+        }
+        //TODO：check if need to change boolean vertical;
+        if(option.contains("y")) {
+            //set alt = true;
+            alt = true;
+        }
+
+        // input file name as input
+        boolean validFileName = false;
+        String fileName = "";
+        String[] fileNames = {"4.node", "633.node", "box.node", "dots.node", "flag.node", "grid.node",
+                    "ladder.node", "spiral.node", "tri.node"};
+        Set<String> fileSet = new HashSet<String>(Arrays.asList(fileNames));
+
+        while (!validFileName) {
+            System.out.println("Enter a valid input file name: " + Arrays.toString(fileNames));
+            fileName = commandSC.next().toLowerCase().trim();
+            if (!fileSet.contains(fileName)) {
+                System.out.println("Enter a valid file name: " + fileName.toString());
+            } else {
+                validFileName = true; //exit loop
+            }
+        }
+
+        Scanner fileScan = null;
         try {
-//            sc = new Scanner(new File("/Users/jiazeng/Desktop/delaunay/4.node"));
-            sc = new Scanner(new File("4.node"));
+            fileScan = new Scanner(new File("./node/" + fileName));
         } catch (FileNotFoundException e) {
-            System.out.println("File not found exception");
+            System.out.println("Fnile not found exception");
             System.exit(1);
         }
-        String next = "";
+        //String firstLine = "";
+        int numVertices;
+        int numDimension;
+        int numAttributes;
+        int boudaryMarker;
 
-        while(sc.hasNextLine()) {
-            next = sc.nextLine();
+
+//        First line: <# of vertices> <dimension (must be 2)> <# of attributes> <# of boundary markers (0 or 1)>
+        while(fileScan.hasNextLine() && foundLine == "") {
+            String line = fileScan.nextLine();
+            Scanner lineScan = new Scanner(line);
+            String name = lineScan.next();
+            String gender = lineScan.next();
+            if(name.equalsIgnoreCase(inputName) && gender.equalsIgnoreCase(inputGender)) {
+                foundLine = line;
+            }
         }
-        System.out.println(next);
+
+        if (fileScan.hasNextLine()) { //first line
+            Scanner lineScan = new Scanner((fileScan.nextLine())); //there must be 4 ints on the first line
+            numVertices = lineScan.nextInt();
+            numDimension = lineScan.nextInt();
+            numAttributes = lineScan.nextInt();
+            boudaryMarker = lineScan.nextInt();
+        }
+
+
+        //read through the next
+        //Remaining lines: <vertex #> <x> <y> [attributes] [boundary marker]
+        while (fileScan.hasNextLine()) {
+            String line = fileScan.nextLine();
+            if(line.isEmpty()) {
+                int vertexNum =
+
+            }
+        }
+
+
+
         //output:
         //number of point,
+
+//        Blank lines and comments prefixed by `#' may be placed anywhere.
+//        Vertices must be numbered consecutively, starting from one or zero.
+//
+//
+
     }
 }
 // 4 2 0 0
@@ -442,35 +534,6 @@ class Delaunay{
 // 3 0 10
 // 4 0 7.5
 
-
-    // tuple<int, int, int> triang(Edge* start) {
-    //     int nedges = 1;
-    //     int ids[3];
-    //     Edge* curr = start;
-    //     ids[0] = start->org.id;
-    //     while (curr->lnext() != start) {
-    //         // we need to make sure points are visited in ccw order
-    //         // Consider when the convex hull has 3 edges. If we
-    //         // did not do this, then the triangle for the convex
-    //         // hull will be outputted when it shouldn't be
-    //         curr = curr->lnext();
-    //         nedges++;
-    //         if (nedges > 3) {
-    //             return make_tuple (-1, -1, -1);
-    //         }
-    //         ids[nedges-1] = curr->org.id;
-    //     }
-    //     sort(begin(ids), end(ids));
-    //     return make_tuple (ids[0], ids[1], ids[2]);
-    // }
-
-    // tuple<int, int> toTuple(Edge* e) {
-    //     return make_tuple(e->org.id, e->dest.id);
-    // }
-
-
-    //custom comparator class
-    //Collections.sort(Vector verticies, new Comparator<Vertex>(){
 
 //TODO:
 /*
