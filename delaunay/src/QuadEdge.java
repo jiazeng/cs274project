@@ -22,16 +22,14 @@ public class QuadEdge {
     public Edge[] edges;
 
     public QuadEdge(Vertex org, Vertex dest, int id) {
-        Edge[] edges= new Edge[4];
+        edges= new Edge[4];
         for(int i = 0; i < 4; i++) {
             edges[i] = new Edge(this, i);
         }
-        // use edge constructor !!!!!!!!
         edges[0].org = org; // just linking all the edges correctly
         edges[0].dest = dest;
         edges[2].org = dest;
         edges[2].dest = org;
-
         // set next pointers
         edges[0].next = edges[0];
         edges[1].next = edges[3];
@@ -87,12 +85,8 @@ class Subdivision {
     int qeId = 0; //update each time when add edge
 
     public Edge addEdge(Vertex org, Vertex dest) {
-        // TODO: check next_id++
-        //QuadEdge qe = new QuadEdge(org, dest, next_id++);
         QuadEdge qe = new QuadEdge(org, dest, qeId);
         qeId++;
-        // TODO: records.insert( {er->edge_id, er} );
-        //return &er->edges[0];
         return qe.edges[0];
     }
 
@@ -100,16 +94,11 @@ class Subdivision {
         Edge temp = e1.next;
         e1.next = e2.next;
         e2.next = temp;
-
         Edge a = e1.onext().rot();
         Edge b = e2.onext().rot();
         temp = a.next;
         a.next = b.next;
         b.next = temp;
-
-        // verify Onext is still consistent
-        assert (e1.org == e1.next.org);
-        assert (e2.org == e2.next.org);
     }
 
     public Edge connect(Edge e1, Edge e2) {
@@ -122,31 +111,12 @@ class Subdivision {
     public void deleteEdge(Edge e) {
         splice(e, e.oprev());
         splice(e.sym(), e.sym().oprev());
-        // TODO: do I need this?
-		/*
-		//if(e.next == e && e.sym().next == e.sym() && e.rot().next == e.rotinv()
-			&& e.rotinv().next == e.rot()) {
-			//removable++;
-			QuadEdge tmp = e.owner;
-			// maybe remove?
-			//delete tmp;
-
-		}*/
     }
 }
 
 
 //----------------------------------------------------
 class Delaunay{
-//    bool x_first(Vertex v1, Vertex v2) {
-//        return v1.x < v2.x || (v1.x == v2.x && v1.y > v2.y);
-//    }
-//
-//    // TODO check this one
-//    bool y_first(Vertex v1, Vertex v2) {
-////        return v1.y > v2.y || (v1.y == v2.y && v1.x < v2.x);
-//    }
-
     Comparator<Vertex> compareXFirst = new Comparator<Vertex>() {
         @Override
         public int compare(Vertex v1, Vertex v2) {
@@ -204,16 +174,14 @@ class Delaunay{
         return alift * bcdet + blift * cadet + clift * abdet;
     }
 
-    public double leftof(Vertex x, Edge e) {
+    public double leftOf(Vertex x, Edge e) {
         return orient2dexact(x, e.org, e.dest);
     }
 
-    public double rightof(Vertex x, Edge e) {
+    public double rightOf(Vertex x, Edge e) {
         return orient2dexact(x, e.dest, e.org);
     }
 
-
-    //TODO: can i take out init and finish
     public Edge[] delaunay(Subdivision s, int init, int finish, boolean xway, boolean alt, ArrayList<Vertex> vertices) {
         Edge[] edgePair = new Edge[2];
 
@@ -236,6 +204,7 @@ class Delaunay{
             v1 = vertices.get(init);
             v2 = vertices.get(init + 1);
             Edge e = s.addEdge(v1, v2);
+
             edgePair[0] = e;
             edgePair[1] = e.sym();
             return edgePair;
@@ -250,24 +219,22 @@ class Delaunay{
             Vertex v1;
             Vertex v2;
             Vertex v3;
-
             v1 = vertices.get(init);
             v2 = vertices.get(init + 1);
             v3 = vertices.get(init + 2);
 
-
             Edge e1 = s.addEdge(v1, v2);
             Edge e2 = s.addEdge(v2, v3);
             s.splice(e1.sym(), e2);
-            double pred = orient2dexact(v1, v2, v3);
-            if (pred > 0) {
+            double pre = orient2dexact(v1, v2, v3);
+            if (pre > 0) {
                 s.connect(e2, e1);
                 edgePair[0] = e1;
                 edgePair[1] = e2.sym();
-            } else if (pred < 0) {
-                Edge c = s.connect(e2, e1);
-                edgePair[0] = c.sym();
-                edgePair[1] = c;
+            } else if (pre < 0) {
+                Edge temp = s.connect(e2, e1);
+                edgePair[0] = temp.sym();
+                edgePair[1] = temp;
             } else { //<0
                 edgePair[0] = e1;
                 edgePair[1] = e2.sym();
@@ -275,7 +242,6 @@ class Delaunay{
             return edgePair;
         }
         if(size > 3) {
-            // if size >= 4, triangulate the two halves
             if(xway) {
                 Arrays.sort(tempArr, init, finish, compareXFirst);
             } else {
@@ -283,52 +249,21 @@ class Delaunay{
             }
         }
 
-
-
-
-//        // size >= 4. divide and conquer
-//        // triangulate the two halves
-//        if (vertical) {
-//            std::nth_element(
-//                    vertices + start,
-//                    vertices + ((start + end) / 2),
-//                    vertices + end,
-//                    x_first
-//        );
-//        } else {
-//            std::nth_element(
-//                    vertices + start,
-//                    vertices + ((start + end) / 2),
-//                    vertices + end,
-//                    y_first
-//        );
-
-
         Edge[] left;
         Edge[] right;
-
         if (alt) {
             left = delaunay(s, init, (init + finish) / 2, !xway, alt, vertices);
-            right = delaunay(s, (init + finish) / 2, init, !xway, alt, vertices);
+            right = delaunay(s, (init + finish) / 2, finish, !xway, alt, vertices);
         } else {
             left = delaunay(s, init, (init + finish) / 2, xway, alt, vertices);
-            right = delaunay(s, (init + finish) / 2, init, xway, alt, vertices);
+            right = delaunay(s, (init + finish) / 2, finish, xway, alt, vertices);
         }
-
         Edge ldo = left[0];
         Edge ldi = left[1];
         Edge rdi = right[0];
         Edge rdo = right[1];
 
-
         if (alt) {
-            // If vertical is True, then we need leftmost + rightmost of each side as before
-            // If vertical is False, then we need topmost + bottommost
-            // In either case, the recursive step outputs the opposite.
-
-//            bool (*comparator)(Vertex, Vertex) = vertical ? x_first : y_first;
-
-
             if (xway) {
                 while (compareXFirst.compare(ldo.rprev().org, ldo.org) > 0) {
                     ldo = ldo.rprev();
@@ -336,11 +271,9 @@ class Delaunay{
                 while (compareXFirst.compare(ldi.org, ldi.lprev().org) > 0) {
                     ldi = ldi.lprev();
                 }
-
                 while (compareXFirst.compare(rdi.rprev().org, rdi.org) > 0) {
                     rdi = rdi.rprev();
                 }
-
                 while (compareXFirst.compare(rdo.org, rdo.lprev().org) > 0) {
                     rdo = rdo.lprev();
                 }
@@ -348,9 +281,6 @@ class Delaunay{
                 while (compareYFirst.compare(ldo.rnext().org, ldo.org) > 0) {
                     ldo = ldo.rnext();
                 }
-                // ldi is cw edge from bottommost/rightmost
-                // if bottommost - go ccw to rightmost
-                // if rightmost - go cw to bottommost
                 while (compareYFirst.compare(ldi.org, ldi.lnext().org) > 0) {
                     ldi = ldi.lnext();
                 }
@@ -361,13 +291,12 @@ class Delaunay{
                     rdo = rdo.lnext();
                 }
             }
-
         }
 
         while (true) {
-            if (leftof(rdi.org, ldi) > 0) {
+            if (leftOf(rdi.org, ldi) > 0) {
                 ldi = ldi.lnext();
-            } else if (rightof(ldi.org, rdi) > 0) {
+            } else if (rightOf(ldi.org, rdi) > 0) {
                 rdi = rdi.rprev();
             } else {
                 break;
@@ -391,7 +320,7 @@ class Delaunay{
 
         while (true) {
             lcand = base.sym().onext();
-            if (rightof(lcand.dest, base) > 0) {
+            if (rightOf(lcand.dest, base) > 0) {
                 while (inCircle(base.dest, base.org, lcand.dest, lcand.onext().dest) > 0) {
                     t = lcand.onext();
                     s.deleteEdge(lcand);
@@ -401,8 +330,7 @@ class Delaunay{
 
             rcand = base.oprev();
 
-            if (rightof(rcand.dest, base) > 0) {
-                //cout << "Entering rcand loop" << endl;
+            if (rightOf(rcand.dest, base) > 0) {
                 while (inCircle(base.dest, base.org, rcand.dest, rcand.oprev().dest) > 0) {
                     t = rcand.oprev();
                     s.deleteEdge(rcand);
@@ -410,8 +338,8 @@ class Delaunay{
                 }
             }
 
-            lvalid = rightof(lcand.dest, base);
-            rvalid = rightof(rcand.dest, base);
+            lvalid = rightOf(lcand.dest, base);
+            rvalid = rightOf(rcand.dest, base);
 
             if (lvalid <= 0 && rvalid <= 0) {
                 //finish merge
@@ -419,47 +347,31 @@ class Delaunay{
             }
             // choose which edge to connect
             if (lvalid <= 0 || (rvalid > 0 && inCircle(lcand.dest, lcand.org, rcand.org, rcand.dest) > 0)) {
-                // Adding rcand
                 base = s.connect(rcand, base.sym());
             } else {
-                // Adding lcand
                 base = s.connect(base.sym(), lcand.sym());
             }
-            edgePair[0] = ldo;
-            edgePair[1] = rdo;
-//            return edgePair;
         }
+        edgePair[0] = ldo;
+        edgePair[1] = rdo;
         return edgePair;
     }
-
-//    void printVertex(Vertex v) {
-//        cout << v.x << " " << v.y << " id " << v.id << endl;
-//    }
-//
-//    void printEdge(Edge* e) {
-//        cout << "edge" << endl;
-//        cout << "org ";
-//        printVertex(e->org);
-//        cout << "dest ";
-//        printVertex(e->dest);
-//    }
 
 //    outputTriangulation(s2, d, nverts, p.le, outname);
     // returns the three sides of a triangle with a given edge
     public int[] triangle(Edge start) {
-        int nedges = 1;
-        //int ids[3];
+        int numEdges = 1;
         int[] ids = new int[3];
         Edge curr = start;
         ids[0] = start.org.id;
         while (curr.lnext() != start) {
             curr = curr.lnext();
-            nedges++;
-            if (nedges > 3) {
+            numEdges++;
+            if (numEdges > 3) {
                 int[] triang = {-1, -1, -1};
                 return triang;
             }
-            ids[nedges-1] = curr.org.id;
+            ids[numEdges - 1] = curr.org.id;
         }
         Arrays.sort(ids);
         return ids;
@@ -473,16 +385,12 @@ class Delaunay{
         return points;
     }
 
-    //    void outputTriangulation(Subdivision &s, Vertex verts[], int n_verts, Edge* start, const char* outname) {
-    public void triangulate (Subdivision s, ArrayList<Vertex> vertices, int numVertices, Edge start,
-                             String outputFile) throws IOException {
-
+    public void triangulate (int numVertices, Edge start, String outputFile) throws IOException {
         Set<int[]> triangles = new HashSet<>();
         Set<int[]> visited = new HashSet<>();
         Queue<Edge> toCheck = new LinkedList<>();
         toCheck.add(start);
         visited.add(toPoints(start) );
-
         Edge curr;
         while (!toCheck.isEmpty()) {
             curr = toCheck.peek();
@@ -500,10 +408,10 @@ class Delaunay{
             }
         }
 
-        int ntriangles = triangles.size();
+        int numTriangles = triangles.size();
         int[] temp = {-1, -1, -1};
         if (!triangles.contains(temp)) {
-            ntriangles--;
+            numTriangles--;
         }
 
         int count = 1;
@@ -515,20 +423,16 @@ class Delaunay{
         if (count == 3 && numVertices > 3) {
             int[] ids = new int[3];
             ids[0] = curr.org.id;
-            ids[2] = curr.rprev().org.id;
-            ids[3] = curr.rprev().rprev().org.id;
+            ids[1] = curr.rprev().org.id;
+            ids[2] = curr.rprev().rprev().org.id;
             Arrays.sort(ids);
-//            triangles.erase( make_tuple (ids[0], ids[1], ids[2]) );
             triangles.remove(ids);
-            ntriangles--;
+            numTriangles--;
         }
 
         // Write the file
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter("./node/" + outputFile))) {
-//            String content = "This is the content to write into file\n";
-//            bw.write(content);
-//            System.out.println("Finished writing to file");
-            bw.write(ntriangles + " 3 0\n");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("./ele/" + outputFile))) {
+            bw.write(numTriangles + " 3 0\n");
             int i = 0;
             for(int[] t: triangles) {
                 if(t[0] == -1) {
@@ -537,19 +441,13 @@ class Delaunay{
                 bw.write(i + " " + t[0] + " " + t[1] + " " + t[2] + "\n");
                 i++;
             }
-            System.out.println("Finished writing to file");
+            System.out.println("Finished writing to file " + outputFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-
-
-        public static void main(String[] args) {
-
-        // TODO: init exact geometric predicates
-//        exactinit();
-
+    public static void main(String[] args) {
         boolean alt = false;
         boolean validInput = false;
         String option = "";
@@ -564,15 +462,12 @@ class Delaunay{
             }
         }
         if(option.contains("y")) {
-            //set alt = true;
             alt = true;
         }
-
-        // input file name as input
         boolean validFileName = false;
         String inputFile = "";
-        String[] fileNames = {"4.node", "633.node", "box.node", "dots.node", "flag.node", "grid.node",
-                    "ladder.node", "spiral.node", "tri.node"};
+        String[] fileNames = {"4.node", "633.node", "box.node", "dots.node", "flag.node", "grid.node", "ladder.node",
+                "spiral.node", "tri.node", "ttimeu10000.node", "ttimeu100000.node", "ttimeu100000.node"};
         Set<String> fileSet = new HashSet<String>(Arrays.asList(fileNames));
 
         while (!validFileName) {
@@ -585,7 +480,7 @@ class Delaunay{
         // prompt for an output file name
         boolean validOutput = false;
         String outputFile = "";
-        while(validOutput) {
+        while(!validOutput) {
             System.out.println("Enter a valid output file that ends with .ele");
             outputFile = commandSC.next().toLowerCase().trim();
             if(outputFile.endsWith(".ele")) {
@@ -635,38 +530,21 @@ class Delaunay{
             }
         }
 
-        // TODO
-        // auto t1 = Clock::now();
         Subdivision s2 = new Subdivision();
+
+        long startTime = System.nanoTime();
+
         Delaunay d = new Delaunay();
         Edge[] edgePair = d.delaunay(s2, 0, numVertices, true, alt, vertices);
-        // auto t2 = Clock::now();
-//        nanoseconds ms = chrono::duration_cast<nanoseconds>(t2-t1);
-//        cout << ms.count() * MILLI_PER_NANO << " milliseconds to triangulate" << endl;
-//
-//        t1 = Clock::now();
+        long endTime = System.nanoTime();
+        long duration = (endTime - startTime);
+        System.out.println("The time of the delaunay function is: " + duration/1000000 + " milliseconds.");
 
         try{
-            d.triangulate(s2, vertices, numVertices, edgePair[0], outputFile);
+            d.triangulate(numVertices, edgePair[0], outputFile);
         } catch (IOException e){
             System.out.println("IO Exception");
         }
-//        t2 = Clock::now();
-//        ms = chrono::duration_cast<nanoseconds>(t2-t1);
-//        cout << ms.count() * MILLI_PER_NANO << " milliseconds to output triangles" << endl;
-//        cout << s2.removable << " temporary edges deleted along the way" << endl;
-        // memory cleanup
-
-//        delete[] d;
-//        EdgeRecord *er;
-//        for (auto& it : s2.records) {
-//            er = it.second;
-//            delete er;
-//        }
-//
-//        return 0;
-//
-
 
     }
 }
