@@ -23,7 +23,7 @@ public class QuadEdge {
 
     public QuadEdge(Vertex org, Vertex dest, int id) {
         Edge[] edges= new Edge[4];
-        for(int i = 0; i <4; i++) {
+        for(int i = 0; i < 4; i++) {
             edges[i] = new Edge(this, i);
         }
         // use edge constructor !!!!!!!!
@@ -51,7 +51,7 @@ class Edge {
     }
 
     public Edge rot(){
-        return owner.edges[(rotnum +1) % 4];
+        return owner.edges[(rotnum + 1) % 4];
     }
     public Edge sym() {
         return owner.edges[(rotnum + 2) % 4];
@@ -87,13 +87,12 @@ class Subdivision {
     int qeId = 0; //update each time when add edge
 
     public Edge addEdge(Vertex org, Vertex dest) {
+        // TODO: check next_id++
         //QuadEdge qe = new QuadEdge(org, dest, next_id++);
         QuadEdge qe = new QuadEdge(org, dest, qeId);
         qeId++;
-
-        //records.insert( {er->edge_id, er} );
+        // TODO: records.insert( {er->edge_id, er} );
         //return &er->edges[0];
-       // return edges[0];
         return qe.edges[0];
     }
 
@@ -107,6 +106,10 @@ class Subdivision {
         temp = a.next;
         a.next = b.next;
         b.next = temp;
+
+        // verify Onext is still consistent
+        assert (e1.org == e1.next.org);
+        assert (e2.org == e2.next.org);
     }
 
     public Edge connect(Edge e1, Edge e2) {
@@ -119,6 +122,7 @@ class Subdivision {
     public void deleteEdge(Edge e) {
         splice(e, e.oprev());
         splice(e.sym(), e.sym().oprev());
+        // TODO: do I need this?
 		/*
 		//if(e.next == e && e.sym().next == e.sym() && e.rot().next == e.rotinv()
 			&& e.rotinv().next == e.rot()) {
@@ -134,21 +138,21 @@ class Subdivision {
 
 //----------------------------------------------------
 class Delaunay{
+//    bool x_first(Vertex v1, Vertex v2) {
+//        return v1.x < v2.x || (v1.x == v2.x && v1.y > v2.y);
+//    }
+//
+//    // TODO check this one
+//    bool y_first(Vertex v1, Vertex v2) {
+////        return v1.y > v2.y || (v1.y == v2.y && v1.x < v2.x);
+//    }
 
     Comparator<Vertex> compareXFirst = new Comparator<Vertex>() {
         @Override
         public int compare(Vertex v1, Vertex v2) {
-            if(v1.x > v2.x) {
-                return 1; //v1>v2
-            } else if (v1.x == v2.x) {
-                if(v1.y > v2.y) {
-                    return 1;
-                } else if(v1.y == v2.y) { //v1=v2
-                    return 0;
-                } else { //v1<v2
-                    return -1;
-                }
-            } else { //v1.x < v2.x
+            if(v1.x < v2.x || v1.x == v2.x && v1.y > v2.y) {
+                return 1;
+            } else {
                 return -1;
             }
         }
@@ -157,19 +161,12 @@ class Delaunay{
     Comparator<Vertex> compareYFirst = new Comparator<Vertex>() {
         @Override
         public int compare(Vertex v1, Vertex v2) {
-            if(v1.y > v2.y) {
-                return 1; //v1>v2
-            } else if (v1.y == v2.y) {
-                if(v1.x > v2.x) {
-                    return 1;
-                } else if(v1.x == v2.x) { //v1=v2
-                    return 0;
-                } else { //v1<v2
-                    return -1;
-                }
-            } else { //v1.y < v2.y
+            if(v1.y > v2.y || (v1.y == v2.y && v1.x < v2.x)) {
+                return 1;
+            } else {
                 return -1;
-            }        }
+            }
+        }
     };
 
 
@@ -216,10 +213,9 @@ class Delaunay{
     }
 
 
+    //TODO: can i take out init and finish
     public Edge[] delaunay(Subdivision s, int init, int finish, boolean xway, boolean alt, ArrayList<Vertex> vertices) {
         Edge[] edgePair = new Edge[2];
-        Edge[] left = new Edge[2];
-        Edge[] right = new Edge[2];
 
         int size = finish - init;
         if (size < 2) {
@@ -245,7 +241,6 @@ class Delaunay{
             return edgePair;
         }
         if (size == 3) {
-
             if (xway) {
                 Arrays.sort(tempArr, init, finish, compareXFirst);
             } else {
@@ -279,6 +274,16 @@ class Delaunay{
             }
             return edgePair;
         }
+        if(size > 3) {
+            // if size >= 4, triangulate the two halves
+            if(xway) {
+                Arrays.sort(tempArr, init, finish, compareXFirst);
+            } else {
+                Arrays.sort(tempArr, init, finish, compareXFirst);
+            }
+        }
+
+
 
 
 //        // size >= 4. divide and conquer
@@ -299,8 +304,8 @@ class Delaunay{
 //        );
 
 
-        // EdgePair left;
-        // EdgePair right;
+        Edge[] left;
+        Edge[] right;
 
         if (alt) {
             left = delaunay(s, init, (init + finish) / 2, !xway, alt, vertices);
@@ -343,16 +348,18 @@ class Delaunay{
                 while (compareYFirst.compare(ldo.rnext().org, ldo.org) > 0) {
                     ldo = ldo.rnext();
                 }
+                // ldi is cw edge from bottommost/rightmost
+                // if bottommost - go ccw to rightmost
+                // if rightmost - go cw to bottommost
                 while (compareYFirst.compare(ldi.org, ldi.lnext().org) > 0) {
                     ldi = ldi.lnext();
+                }
+                while (compareYFirst.compare(rdi.rnext().org, rdi.org) > 0) {
+                    rdi = rdi.rnext();
                 }
                 while (compareYFirst.compare(rdo.org, rdo.lnext().org) > 0) {
                     rdo = rdo.lnext();
                 }
-                while (compareYFirst.compare(rdi.rnext().org, rdi.org) >0) {
-                    rdi = rdi.rnext();
-                }
-
             }
 
         }
@@ -362,7 +369,6 @@ class Delaunay{
                 ldi = ldi.lnext();
             } else if (rightof(ldi.org, rdi) > 0) {
                 rdi = rdi.rprev();
-
             } else {
                 break;
             }
@@ -455,7 +461,6 @@ class Delaunay{
             }
             ids[nedges-1] = curr.org.id;
         }
-        //TODO: sort(begin(ids), end(ids));
         Arrays.sort(ids);
         return ids;
     }
@@ -485,12 +490,11 @@ class Delaunay{
             triangles.add(triangle(curr));
             int[] twoPt1 = toPoints(curr.onext());
             int[] twoPt2 = toPoints(curr.sym());
-            //TODO: what's the point of using unordered_set.end, what's java equivalent
-            if (visited.find(twoPt1) == visited.end()) {
+            if(visited.contains(twoPt1)) {
                 toCheck.add(curr.onext());
                 visited.add(twoPt1);
             }
-            if (visited.find(twoPt1) == visited.end()) {
+            if(visited.contains((twoPt2))) {
                 toCheck.add(curr.sym());
                 visited.add(twoPt2);
             }
@@ -498,8 +502,7 @@ class Delaunay{
 
         int ntriangles = triangles.size();
         int[] temp = {-1, -1, -1};
-        // TODO: if (triangles.find(make_tuple(-1,-1,-1) ) != triangles.end()) {
-        if (triangles.contains(temp != triangles.end()) {
+        if (!triangles.contains(temp)) {
             ntriangles--;
         }
 
@@ -514,30 +517,30 @@ class Delaunay{
             ids[0] = curr.org.id;
             ids[2] = curr.rprev().org.id;
             ids[3] = curr.rprev().rprev().org.id;
-            //TODO: sort(begin(ids), end(ids));
             Arrays.sort(ids);
 //            triangles.erase( make_tuple (ids[0], ids[1], ids[2]) );
             triangles.remove(ids);
             ntriangles--;
         }
 
-        //TODO: write the file
+        // Write the file
         try (BufferedWriter bw = new BufferedWriter(new FileWriter("./node/" + outputFile))) {
 //            String content = "This is the content to write into file\n";
 //            bw.write(content);
-//            System.out.println("Done");
-
+//            System.out.println("Finished writing to file");
+            bw.write(ntriangles + " 3 0\n");
+            int i = 0;
+            for(int[] t: triangles) {
+                if(t[0] == -1) {
+                    continue;
+                }
+                bw.write(i + " " + t[0] + " " + t[1] + " " + t[2] + "\n");
+                i++;
+            }
+            System.out.println("Finished writing to file");
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        outfile << ntriangles << " 3 0" << endl;
-//        int i = 0;
-//        for (auto &tr : triangles) {
-//            if (get<0>(tr) == -1) { continue; }
-//
-//            outfile << i++ << " " << get<0>(tr) << " " << get<1>(tr) << " " << get<2>(tr) << endl;
-//        }
-//        outfile.close();
     }
 
 
@@ -560,7 +563,6 @@ class Delaunay{
                 validInput = true; //input is valid
             }
         }
-        // TODO：check if need to change boolean vertical;
         if(option.contains("y")) {
             //set alt = true;
             alt = true;
@@ -638,15 +640,17 @@ class Delaunay{
         Subdivision s2 = new Subdivision();
         Delaunay d = new Delaunay();
         Edge[] edgePair = d.delaunay(s2, 0, numVertices, true, alt, vertices);
-        // TODO
         // auto t2 = Clock::now();
 //        nanoseconds ms = chrono::duration_cast<nanoseconds>(t2-t1);
 //        cout << ms.count() * MILLI_PER_NANO << " milliseconds to triangulate" << endl;
 //
 //        t1 = Clock::now();
 
-        // TODO
-        // outputTriangulation(s2, d, nverts, p.le, outname);
+        try{
+            d.triangulate(s2, vertices, numVertices, edgePair[0], outputFile);
+        } catch (IOException e){
+            System.out.println("IO Exception");
+        }
 //        t2 = Clock::now();
 //        ms = chrono::duration_cast<nanoseconds>(t2-t1);
 //        cout << ms.count() * MILLI_PER_NANO << " milliseconds to output triangles" << endl;
@@ -666,22 +670,7 @@ class Delaunay{
 
     }
 }
-// 4 2 0 0
-// 1 -10 4
-// 2 10 -4
-// 3 0 10
-// 4 0 7.5
 
-//TODO: write output file
-//TODO:
-
-//TODO:
-/*
-subdivision.addEdge
-delete e.owner (find out java way)
-implement comparator
-add Edge[2] as an output for Edge pair
-*/
 
 
 
